@@ -414,6 +414,12 @@ class Subject(object):
         selfnode = rdflib.URIRef(self.identity)
         for attr in self.attrs:
             objs = self.attrs[attr]
+            if(isinstance(objs, np.ndarray)):
+                #print("Found np.ndarray")
+                #print(objs)
+                #print(attr)
+                #try to convert np.ndarray to a list
+                objs = objs.tolist()
             if not (isinstance(objs, set) or isinstance(objs, list)):
                 objs = set([objs])
             for obj in objs:
@@ -438,6 +444,14 @@ class Subject(object):
         """
         graph = rdflib.Graph()
         graph.bind('bald', 'http://binary-array-ld.net/latest/')
+        for prefix_name in self._prefixes:
+           #strip the double underscore suffix
+           new_name = prefix_name[:-2]
+           #print(prefix_name)
+           #print(new_name)
+           #print(self._prefixes[prefix_name])
+
+           graph.bind(new_name, self._prefixes[prefix_name])
         graph = self.rdfnode(graph)
         
         return graph
@@ -583,16 +597,13 @@ def load_netcdf(afilepath, uri=None):
                 fhandle.variables[name].dimensions[0] == name):
                 sattrs['bald__array'] = name
                 sattrs['rdf__type'] = 'bald__Reference'
+                
             if fhandle.variables[name].shape:
                 sattrs['bald__shape'] = fhandle.variables[name].shape
                 var = Array(identity, sattrs, prefixes=prefixes, aliases=aliases)
             else:
                 var = Subject(identity, sattrs, prefixes=prefixes, aliases=aliases)
-            if name not in skipped_variables:
-                # Don't include skipped variables, such as prefix or alias
-                # variables, within the containment relation.
-                root_container.attrs['bald__contains'].append(var)
-
+            root_container.attrs['bald__contains'].append(var)
             file_variables[name] = var
                 
 
